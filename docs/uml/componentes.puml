@@ -1,0 +1,88 @@
+@startuml componentes
+!pragma layout smetana
+skinparam shadowing false
+skinparam componentStyle uml2
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 12
+title MiniPar 2026.2 - Componentes e contratos reais
+package "Interfaces existentes" {
+  component "Terminal\nmain.py / menu.py" as CLI
+  component "IDE Web original\napp.py / index.html" as IDE
+  component "Web educacional\neducational_web.py / educacional.html" as EDU
+}
+package "Orquestração Python" {
+  component "main.compile_file" as Driver
+  component "educational_pipeline.analyze_source" as Facade
+}
+package "Componentes do compilador (src/)" {
+  component "Lexer\nlexer.py" as Lex
+  component "Parser\nparser.py" as Par
+  component "AST\nast_nodes.py" as AST
+  component "SemanticAnalyzer\nsemantic.py" as Sem {
+    component "Tabela de símbolos\n_scopes / _classes / _functions\nregistros Symbol" as Symbols
+  }
+  component "TACGenerator\ntac.py" as TAC
+  component "CppCodeGenerator\ncodegen.py" as CPP
+  component "Diagnósticos\ndiagnostics.py" as Diag
+  interface "I1" as ITokens
+  interface "I2" as IAST
+  interface "I3" as ISem
+}
+component "Toolchain\ntoolchain.py" as Tool
+component "G++ C++20 -O3\nprocesso externo" as GPP
+component "Runtime C++\ncpp_template.py + runtime/*.hpp\ntarefas / snapshots / canais / RPC / afinidade" as Runtime
+artifact "C++ gerado" as CppFile
+artifact "Binário nativo\n.exe no Windows" as Exe
+component "Trabalhador TCP\nmesmo binário, --worker" as Worker
+CLI ..> Driver
+IDE ..> Driver : subprocess main.py
+EDU ..> Facade
+EDU ..> Tool : compile_command
+Driver ..> ITokens
+Driver ..> IAST
+Driver ..> ISem
+Driver ..> TAC
+Driver ..> CPP
+Facade ..> ITokens
+Facade ..> IAST
+Facade ..> ISem
+Facade ..> TAC
+Facade ..> CPP
+Lex -- ITokens
+Par -- IAST
+Sem -- ISem
+Par ..> AST : constrói
+Sem ..> AST : valida
+TAC ..> AST : percorre
+CPP ..> AST : traduz
+CPP ..> Sem : consulta tipos
+Lex ..> Diag
+Par ..> Diag
+Sem ..> Diag
+CPP ..> Runtime : incorpora cabeçalhos
+CPP ..> CppFile : <<create>>
+CPP ..> Tool : generate / compile_cpp
+Tool ..> GPP : subprocess
+GPP ..> CppFile : lê
+GPP ..> Exe : <<create>>
+Exe ..> Worker : Fork remoto via TCP
+note right of Exe
+  Executado por menu.py, app.py
+  ou educational_web.py.
+end note
+note bottom of Symbols
+  Estrutura interna do analisador semântico.
+  Não existe uma classe SymbolTable Python separada.
+end note
+note bottom of TAC
+  TAC e C++ são gerados a partir da AST validada.
+  C++ não é produzido por interpretação do texto TAC.
+end note
+note bottom of ISem
+  I1: tokenize(): List[Token]
+  I2: parse(): Program
+  I3: analyze(Program): bool + diagnostics/símbolos
+  Interfaces representam contratos de métodos existentes,
+  não novas classes abstratas ou serviços adicionados.
+end note
+@enduml

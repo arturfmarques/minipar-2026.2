@@ -1,0 +1,4 @@
+# Ferramentas externas de validacao, nao implementam o minicompilador MiniPar.
+ziglang==0.17.1
+unicorn==2.1.4
+pyelftools==0.33

@@ -1,0 +1,6 @@
+# A condição decide qual ramo executar.
+seq {
+    number nota = 8;
+    if (nota >= 7) { print("aprovado"); }
+    else { print("revisar"); }
+}

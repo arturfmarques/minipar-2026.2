@@ -1,0 +1,10 @@
+# Compile e execute o binário para calcular o resultado na tarefa local.
+func square(number value) -> number {
+    return value * value;
+}
+
+seq {
+    var task_id = fork local square(7);
+    number result = join(task_id);
+    print(result);
+}

@@ -1,0 +1,11 @@
+# Instanciação, atributo e método.
+class Contador {
+    number valor = 0;
+    func incrementar() { this.valor = this.valor + 1; }
+    func ler() -> number { return this.valor; }
+}
+seq {
+    var contador = new Contador();
+    contador.incrementar();
+    print(contador.ler());
+}

@@ -1,0 +1,531 @@
+# Teste 11: minicompilador escrito em MiniPar; nenhuma fase delegada ao Python/C++.
+func digito(string c) -> bool { return c >= "0" && c <= "9"; }
+func letra(string c) -> bool { return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_"; }
+func espacos(number n) -> string {
+    var texto = "";
+    for (var i in range(n)) { texto = texto + "  "; }
+    return texto;
+}
+
+class Diagnostics {
+    bool ok = true;
+    string phase = "";
+    string message = "";
+    number line = 1;
+    number column = 1;
+    func reset() { this.ok = true; this.phase = ""; this.message = ""; this.line = 1; this.column = 1; }
+    func error(string phase, string message, number line, number column) {
+        if (this.ok) {
+            this.ok = false; this.phase = phase; this.message = message;
+            this.line = line; this.column = column;
+        }
+    }
+    func show() {
+        print("ERRO", this.phase, to_string(this.line), to_string(this.column), this.message);
+    }
+}
+
+class Token {
+    string kind = "";
+    string lexeme = "";
+    number value = 0;
+    number line = 1;
+    number column = 1;
+    func init(string kind, string lexeme, number value, number line, number column) {
+        this.kind = kind; this.lexeme = lexeme; this.value = value;
+        this.line = line; this.column = column;
+    }
+}
+
+class ASTNode {
+    string kind = "";
+    string text = "";
+    number value = 0;
+    number result = 0;
+    number line = 1;
+    number column = 1;
+    number height = 1;
+    ASTNode left;
+    ASTNode right;
+    func init(string kind, string text, number value, number line, number column) {
+        this.kind = kind; this.text = text; this.value = value;
+        this.line = line; this.column = column;
+    }
+    func tree(number depth, string edge) -> string {
+        var text = espacos(depth) + edge + " " + this.kind + " " + this.text + "\n";
+        if (this.kind == "BINARY") {
+            text = text + this.left.tree(depth + 1, "L");
+            text = text + this.right.tree(depth + 1, "R");
+        }
+        if (this.kind == "UNARY") { text = text + this.right.tree(depth + 1, "R"); }
+        return text;
+    }
+}
+
+class SymbolEntry {
+    string name = "";
+    string kind = "";
+    number value = 0;
+    bool defined = false;
+    bool used = false;
+    func init(string name, string kind, number value, bool defined) {
+        this.name = name; this.kind = kind; this.value = value; this.defined = defined;
+    }
+}
+
+class SymbolTable {
+    var entries = [new SymbolEntry("", "", 0, false)];
+    func init() { this.entries.clear(); }
+    func find(string name) -> number {
+        for (var i in range(len(this.entries))) {
+            if (this.entries[i].name == name) { return i; }
+        }
+        return -1;
+    }
+    func clearCompilation() {
+        var kept = [new SymbolEntry("", "", 0, false)];
+        kept.clear();
+        for (var entry in this.entries) {
+            if (entry.kind == "VAR" && entry.defined) { entry.used = false; kept.append(entry); }
+        }
+        this.entries = kept;
+    }
+    func define(string name, number value) -> bool {
+        if (len(name) == 0 || !is_finite(value)) { return false; }
+        if (!letra(to_string(name[0]))) { return false; }
+        for (var i in range(len(name))) {
+            var c = to_string(name[i]);
+            if (!(letra(c) || digito(c))) { return false; }
+        }
+        var index = this.find(name);
+        if (index < 0) { this.entries.append(new SymbolEntry(name, "VAR", value, true)); }
+        else {
+            this.entries[index].value = value;
+            this.entries[index].defined = true;
+        }
+        return true;
+    }
+    func constant(number value) {
+        var name = to_string(value);
+        if (this.find(name) < 0) { this.entries.append(new SymbolEntry(name, "CONST", value, true)); }
+    }
+    func variable(string name) {
+        var index = this.find(name);
+        if (index < 0) {
+            this.entries.append(new SymbolEntry(name, "VAR", 0, false));
+            index = len(this.entries) - 1;
+        }
+        this.entries[index].used = true;
+    }
+    func show() {
+        print("SIMBOLOS_BEGIN");
+        for (var entry in this.entries) {
+            if (entry.defined) { print("SIMBOLO", entry.name, entry.kind, to_string(entry.value)); }
+            else { print("SIMBOLO", entry.name, entry.kind, "NAO_DEFINIDO"); }
+        }
+        print("SIMBOLOS_END");
+    }
+}
+
+class Lexer {
+    string source = "";
+    number position = 0;
+    number line = 1;
+    number column = 1;
+    Diagnostics diagnostics;
+    var tokens = [new Token("EOF", "", 0, 1, 1)];
+    func init(string source, Diagnostics diagnostics) {
+        this.source = source; this.diagnostics = diagnostics; this.tokens.clear();
+    }
+    func peek() -> string {
+        if (this.position >= len(this.source)) { return ""; }
+        return to_string(this.source[this.position]);
+    }
+    func advance() -> string {
+        var c = this.peek();
+        this.position = this.position + 1;
+        if (c == "\n") { this.line = this.line + 1; this.column = 1; }
+        else { this.column = this.column + 1; }
+        return c;
+    }
+    func numberToken() -> Token {
+        var line = this.line; var column = this.column;
+        var text = ""; var value = 0;
+        while (digito(this.peek()) && this.diagnostics.ok) {
+            var c = this.advance(); text = text + c;
+            value = value * 10 + to_number(c);
+            if (!is_finite(value)) { this.diagnostics.error("LEXICO", "Numero fora da faixa finita", line, column); }
+        }
+        if (this.peek() == "." && this.diagnostics.ok) {
+            text = text + this.advance();
+            if (!digito(this.peek())) {
+                this.diagnostics.error("LEXICO", "Numero malformado: faltam digitos depois do ponto", this.line, this.column);
+            }
+            var scale = 0.1;
+            while (digito(this.peek()) && this.diagnostics.ok) {
+                var c = this.advance(); text = text + c;
+                value = value + to_number(c) * scale; scale = scale / 10;
+            }
+            if (this.peek() == ".") { this.diagnostics.error("LEXICO", "Numero malformado: pontos repetidos", this.line, this.column); }
+        }
+        return new Token("NUMBER", text, value, line, column);
+    }
+    func identifierToken() -> Token {
+        var line = this.line; var column = this.column; var text = "";
+        while (letra(this.peek()) || digito(this.peek())) { text = text + this.advance(); }
+        return new Token("IDENTIFIER", text, 0, line, column);
+    }
+    func analyze() {
+        if (len(this.source) > 4096) { this.diagnostics.error("LEXICO", "Expressao excede 4096 caracteres", 1, 1); }
+        while (this.position < len(this.source) && this.diagnostics.ok) {
+            var c = this.peek();
+            if (c == " " || c == "\t" || c == "\r" || c == "\n") { var ignored = this.advance(); }
+            else {
+                var token = new Token("", "", 0, this.line, this.column);
+                if (digito(c)) { token = this.numberToken(); }
+                else {
+                    if (letra(c)) { token = this.identifierToken(); }
+                    else {
+                        var kind = "";
+                        if (c == "+") { kind = "ADD"; }
+                        if (c == "-") { kind = "SUB"; }
+                        if (c == "*") { kind = "MUL"; }
+                        if (c == "/") { kind = "DIV"; }
+                        if (c == "(") { kind = "LPAREN"; }
+                        if (c == ")") { kind = "RPAREN"; }
+                        if (kind == "") {
+                            this.diagnostics.error("LEXICO", "Caractere invalido ou numero malformado", this.line, this.column);
+                        } else {
+                            token = new Token(kind, c, 0, this.line, this.column);
+                            var consumed = this.advance();
+                        }
+                    }
+                }
+                if (this.diagnostics.ok) {
+                    if (len(this.tokens) >= 1024) { this.diagnostics.error("LEXICO", "Limite de 1024 tokens excedido", this.line, this.column); }
+                    else { this.tokens.append(token); }
+                }
+            }
+        }
+        if (this.diagnostics.ok && len(this.tokens) == 0) { this.diagnostics.error("LEXICO", "Expressao vazia", 1, 1); }
+        this.tokens.append(new Token("EOF", "", 0, this.line, this.column));
+    }
+}
+
+class Parser {
+    var tokens = [new Token("EOF", "", 0, 1, 1)];
+    number position = 0;
+    number nesting = 0;
+    Diagnostics diagnostics;
+    SymbolTable symbols;
+    func init(tokens, Diagnostics diagnostics, SymbolTable symbols) {
+        this.tokens = tokens; this.diagnostics = diagnostics; this.symbols = symbols;
+    }
+    func peek() -> Token { return this.tokens[this.position]; }
+    func errorNode() -> ASTNode {
+        var token = this.peek();
+        return new ASTNode("ERROR", "", 0, token.line, token.column);
+    }
+    func bounded(ASTNode node) -> ASTNode {
+        if (node.height > 128) { this.diagnostics.error("SINTATICO", "AST excede profundidade 128", node.line, node.column); }
+        return node;
+    }
+    func parsePrimary() -> ASTNode {
+        var token = this.peek();
+        if (token.kind == "NUMBER") {
+            this.position = this.position + 1; this.symbols.constant(token.value);
+            return new ASTNode("NUMBER", token.lexeme, token.value, token.line, token.column);
+        }
+        if (token.kind == "IDENTIFIER") {
+            this.position = this.position + 1; this.symbols.variable(token.lexeme);
+            return new ASTNode("IDENTIFIER", token.lexeme, 0, token.line, token.column);
+        }
+        if (token.kind == "LPAREN") {
+            this.position = this.position + 1; this.nesting = this.nesting + 1;
+            if (this.nesting > 128) {
+                this.diagnostics.error("SINTATICO", "Parenteses/unarios excedem profundidade 128", token.line, token.column);
+                return this.errorNode();
+            }
+            var node = this.parseExpression();
+            this.nesting = this.nesting - 1;
+            if (this.diagnostics.ok) {
+                var closing = this.peek();
+                if (closing.kind != "RPAREN") { this.diagnostics.error("SINTATICO", "Esperado parenteses direito", closing.line, closing.column); }
+                else { this.position = this.position + 1; }
+            }
+            return node;
+        }
+        this.diagnostics.error("SINTATICO", "Esperado numero, identificador ou parenteses esquerdo", token.line, token.column);
+        return this.errorNode();
+    }
+    func parseUnary() -> ASTNode {
+        var token = this.peek();
+        if (token.kind == "ADD" || token.kind == "SUB") {
+            this.position = this.position + 1; this.nesting = this.nesting + 1;
+            if (this.nesting > 128) {
+                this.diagnostics.error("SINTATICO", "Parenteses/unarios excedem profundidade 128", token.line, token.column);
+                return this.errorNode();
+            }
+            var operand = this.parseUnary(); this.nesting = this.nesting - 1;
+            var node = new ASTNode("UNARY", token.lexeme, 0, token.line, token.column);
+            node.right = operand; node.height = operand.height + 1;
+            return this.bounded(node);
+        }
+        return this.parsePrimary();
+    }
+    func parseTerm() -> ASTNode {
+        var node = this.parseUnary();
+        while (this.diagnostics.ok && (this.peek().kind == "MUL" || this.peek().kind == "DIV")) {
+            var op = this.peek(); this.position = this.position + 1;
+            var right = this.parseUnary();
+            var parent = new ASTNode("BINARY", op.lexeme, 0, op.line, op.column);
+            parent.left = node; parent.right = right;
+            parent.height = node.height;
+            if (right.height > parent.height) { parent.height = right.height; }
+            parent.height = parent.height + 1; node = this.bounded(parent);
+        }
+        return node;
+    }
+    func parseExpression() -> ASTNode {
+        var node = this.parseTerm();
+        while (this.diagnostics.ok && (this.peek().kind == "ADD" || this.peek().kind == "SUB")) {
+            var op = this.peek(); this.position = this.position + 1;
+            var right = this.parseTerm();
+            var parent = new ASTNode("BINARY", op.lexeme, 0, op.line, op.column);
+            parent.left = node; parent.right = right;
+            parent.height = node.height;
+            if (right.height > parent.height) { parent.height = right.height; }
+            parent.height = parent.height + 1; node = this.bounded(parent);
+        }
+        return node;
+    }
+    func parse() -> ASTNode {
+        var node = this.parseExpression();
+        var token = this.peek();
+        if (this.diagnostics.ok && token.kind != "EOF") {
+            this.diagnostics.error("SINTATICO", "Operador ausente ou tokens restantes", token.line, token.column);
+        }
+        return node;
+    }
+}
+
+class TACGenerator {
+    number counter = 1;
+    string code = "";
+    SymbolTable symbols;
+    func init(SymbolTable symbols) { this.symbols = symbols; }
+    func temporary() -> string {
+        var name = "t" + to_string(this.counter); this.counter = this.counter + 1;
+        while (this.symbols.find(name) >= 0) {
+            name = "t" + to_string(this.counter); this.counter = this.counter + 1;
+        }
+        return name;
+    }
+    func visit(ASTNode node) -> string {
+        if (node.kind == "NUMBER") { return to_string(node.value); }
+        if (node.kind == "IDENTIFIER") { return node.text; }
+        if (node.kind == "UNARY") {
+            var value = this.visit(node.right); var temp = this.temporary();
+            this.code = this.code + temp + " = " + node.text + value + "\n";
+            return temp;
+        }
+        var left = this.visit(node.left); var right = this.visit(node.right); var temp = this.temporary();
+        this.code = this.code + temp + " = " + left + " " + node.text + " " + right + "\n";
+        return temp;
+    }
+    func generate(ASTNode root) -> string {
+        this.counter = 1; this.code = "";
+        var result = this.visit(root);
+        return this.code;
+    }
+}
+
+class ExpressionEvaluator {
+    SymbolTable symbols;
+    Diagnostics diagnostics;
+    func init(SymbolTable symbols, Diagnostics diagnostics) { this.symbols = symbols; this.diagnostics = diagnostics; }
+    func evaluate(ASTNode node) -> number {
+        if (!this.diagnostics.ok) { return 0; }
+        var value = 0;
+        if (node.kind == "NUMBER") { value = node.value; }
+        else {
+            if (node.kind == "IDENTIFIER") {
+                var index = this.symbols.find(node.text);
+                if (index < 0) { this.diagnostics.error("SEMANTICO", "Identificador nao definido: " + node.text, node.line, node.column); return 0; }
+                if (!this.symbols.entries[index].defined) {
+                    this.diagnostics.error("SEMANTICO", "Identificador nao definido: " + node.text, node.line, node.column); return 0;
+                }
+                value = this.symbols.entries[index].value;
+            } else {
+                if (node.kind == "UNARY") {
+                    value = this.evaluate(node.right);
+                    if (node.text == "-") { value = 0 - value; }
+                } else {
+                    var left = this.evaluate(node.left); var right = this.evaluate(node.right);
+                    if (!this.diagnostics.ok) { return 0; }
+                    if (node.text == "+") { value = left + right; }
+                    if (node.text == "-") { value = left - right; }
+                    if (node.text == "*") { value = left * right; }
+                    if (node.text == "/") {
+                        if (right == 0) { this.diagnostics.error("AVALIACAO", "Divisao por zero", node.line, node.column); return 0; }
+                        value = left / right;
+                    }
+                }
+            }
+        }
+        if (!is_finite(value)) { this.diagnostics.error("AVALIACAO", "Resultado nao finito", node.line, node.column); }
+        node.result = value;
+        return value;
+    }
+}
+
+class ARMCodeGenerator {
+    string code = "";
+    number instructions = 0;
+    number pool = 0;
+    bool division = false;
+    SymbolTable symbols;
+    Diagnostics diagnostics;
+    func init(SymbolTable symbols, Diagnostics diagnostics) { this.symbols = symbols; this.diagnostics = diagnostics; }
+    func error(ASTNode node, string message) { this.diagnostics.error("ARM", message, node.line, node.column); }
+    func validate(ASTNode node) -> bool {
+        if (!this.diagnostics.ok) { return false; }
+        if (node.result != floor(node.result)) { this.error(node, "Backend ARM exige inteiros; valor fracionario nao suportado"); return false; }
+        if (node.result < -2147483648 || node.result > 2147483647) { this.error(node, "Overflow ou constante fora dos inteiros assinados de 32 bits"); return false; }
+        if (node.kind == "UNARY") {
+            # Magnitude 2^31 e valida exclusivamente sob o sinal menos.
+            if (node.text == "-" && node.right.kind == "NUMBER" && node.right.value == 2147483648) { return true; }
+            return this.validate(node.right);
+        }
+        if (node.kind == "BINARY") {
+            var left = this.validate(node.left); var right = this.validate(node.right);
+            if (node.text == "/") { this.division = true; }
+            return left && right;
+        }
+        return this.diagnostics.ok;
+    }
+    func emit(string instruction) {
+        this.code = this.code + "    " + instruction + "\n";
+        this.instructions = this.instructions + 1;
+        # Pools locais limitam o alcance de LDR literal sem executar dados.
+        if (this.instructions >= 128) {
+            this.pool = this.pool + 1;
+            var label = "__expr_pool_" + to_string(this.pool);
+            this.code = this.code + "    b " + label + "\n.ltorg\n" + label + ":\n";
+            this.instructions = 0;
+        }
+    }
+    func visit(ASTNode node) {
+        if (node.kind == "NUMBER") { this.emit("ldr r0, =" + to_string(node.value)); }
+        else {
+            if (node.kind == "IDENTIFIER") {
+                this.emit("ldr r0, =__expr_var_" + to_string(this.symbols.find(node.text)));
+                this.emit("ldr r0, [r0]");
+            } else {
+                if (node.kind == "UNARY") {
+                    if (node.text == "-" && node.right.kind == "NUMBER" && node.right.value == 2147483648) {
+                        this.emit("ldr r0, =-2147483648");
+                    } else {
+                        this.visit(node.right);
+                        if (node.text == "-") { this.emit("rsb r0, r0, #0"); }
+                    }
+                } else {
+                    this.visit(node.left); this.emit("push {r0, r1}");
+                    this.visit(node.right); this.emit("pop {r1, r2}");
+                    if (node.text == "+") { this.emit("add r0, r1, r0"); }
+                    if (node.text == "-") { this.emit("sub r0, r1, r0"); }
+                    if (node.text == "*") { this.emit("mul r2, r1, r0"); this.emit("mov r0, r2"); }
+                    if (node.text == "/") { this.emit("bl __expr_sdiv"); }
+                }
+            }
+        }
+    }
+    func divisionRoutine() -> string {
+        # Divisao assinada por restauracao, 32 passos. Cortex-A9 nao tem SDIV.
+        return "__expr_sdiv:\n" +
+            "    cmp r0, #0\n    beq __expr_div_zero\n    push {r2-r6, lr}\n" +
+            "    eor r6, r1, r0\n    cmp r1, #0\n    rsblt r1, r1, #0\n" +
+            "    cmp r0, #0\n    rsblt r0, r0, #0\n    mov r2, #0\n    mov r3, #0\n    mov r4, #32\n" +
+            "__expr_div_loop:\n    lsls r1, r1, #1\n    adcs r3, r3, r3\n    cmp r3, r0\n" +
+            "    subcs r3, r3, r0\n    adc r2, r2, r2\n    subs r4, r4, #1\n    bne __expr_div_loop\n" +
+            "    cmp r6, #0\n    rsblt r2, r2, #0\n    mov r0, r2\n    pop {r2-r6, pc}\n" +
+            "__expr_div_zero:\n    mov r12, #1\n    b __expr_div_zero\n";
+    }
+    func generate(ASTNode root) -> string {
+        this.code = ""; this.pool = 0; this.instructions = 0; this.division = false;
+        if (!this.validate(root)) { return ""; }
+        this.code = ".syntax unified\n.arch armv7-a\n.arm\n.global _start\n.global __expr_done\n.text\n.balign 4\n_start:\n";
+        this.emit("ldr sp, =__expr_stack_top"); this.emit("mov r12, #0");
+        this.visit(root);
+        this.code = this.code + "__expr_done:\n    b __expr_done\n.ltorg\n";
+        if (this.division) { this.code = this.code + this.divisionRoutine(); }
+        this.code = this.code + ".data\n.balign 4\n";
+        for (var i in range(len(this.symbols.entries))) {
+            var entry = this.symbols.entries[i];
+            if (entry.kind == "VAR" && entry.defined && entry.used) {
+                this.code = this.code + "__expr_var_" + to_string(i) + ":\n.word " + to_string(entry.value) + "\n";
+            }
+        }
+        this.code = this.code + ".bss\n.balign 8\n__expr_stack:\n.space 65536\n__expr_stack_top:\n";
+        return this.code;
+    }
+}
+
+class MiniCompiler {
+    var diagnostics = new Diagnostics();
+    var symbols = new SymbolTable();
+    func report(number code) -> bool {
+        this.diagnostics.show();
+        if (code == 2) { print("STATUS ARM_NAO_SUPORTADO"); }
+        else { print("STATUS ERRO"); }
+        set_exit_code(code);
+        return false;
+    }
+    func compile(string source, string output) -> bool {
+        this.diagnostics.reset(); this.symbols.clearCompilation(); set_exit_code(0);
+        var lexer = new Lexer(source, this.diagnostics); lexer.analyze();
+        print("TOKENS_BEGIN");
+        for (var token in lexer.tokens) {
+            if (token.kind != "EOF") { print("TOKEN", token.kind, token.lexeme, to_string(token.line), to_string(token.column)); }
+        }
+        print("TOKENS_END");
+        if (!this.diagnostics.ok) { return this.report(1); }
+        var parser = new Parser(lexer.tokens, this.diagnostics, this.symbols);
+        var root = parser.parse();
+        if (!this.diagnostics.ok) { return this.report(1); }
+        print("AST_BEGIN"); print(root.tree(0, "ROOT")); print("AST_END");
+        this.symbols.show();
+        var generator = new TACGenerator(this.symbols);
+        print("TAC_BEGIN"); print(generator.generate(root)); print("TAC_END");
+        var evaluator = new ExpressionEvaluator(this.symbols, this.diagnostics);
+        var result = evaluator.evaluate(root);
+        if (!this.diagnostics.ok) { return this.report(1); }
+        print("RESULTADO", to_string(result));
+        var arm = new ARMCodeGenerator(this.symbols, this.diagnostics);
+        var assembly = arm.generate(root);
+        if (!this.diagnostics.ok) { return this.report(2); }
+        var length = len(output);
+        var extension = "";
+        if (length >= 4) {
+            extension = to_string(output[length - 4]) + to_string(output[length - 3]) +
+                        to_string(output[length - 2]) + to_string(output[length - 1]);
+        }
+        if (extension != ".arm") {
+            this.diagnostics.error("IO", "Saida deve possuir extensao .arm", 1, 1); return this.report(1);
+        }
+        if (!try_write_text(output, assembly)) {
+            this.diagnostics.error("IO", "Falha ao gravar arquivo ARM: " + output, 1, 1); return this.report(1);
+        }
+        print("ARM_BEGIN"); print(assembly); print("ARM_END");
+        print("ARQUIVO:", output); print("STATUS APROVADO");
+        return true;
+    }
+}
+
+seq {
+    var compiler = new MiniCompiler();
+    var source = input("Expressao infixada: ");
+    var output = get_env("MINIPAR_ARM_OUTPUT", "output/teste11-expressao.arm");
+    var success = compiler.compile(source, output);
+}
+

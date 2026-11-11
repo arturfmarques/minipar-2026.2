@@ -1,0 +1,17 @@
+[
+  {
+    "file": "docs\\evidencias\\fractais\\teste9-mandelbrot.txt",
+    "source": "native_stdout",
+    "sha256": "947d5b2d7f2b813ec9a3c3d300a473df0365140c24fc22298be8f0d6f4944724"
+  },
+  {
+    "file": "docs\\evidencias\\fractais\\teste10-mandelbrot.txt",
+    "source": "native_stdout",
+    "sha256": "947d5b2d7f2b813ec9a3c3d300a473df0365140c24fc22298be8f0d6f4944724"
+  },
+  {
+    "file": "docs\\evidencias\\fractais\\teste10-sierpinski.svg",
+    "source": "output\\teste10-sierpinski-par.svg",
+    "sha256": "81241e57d8bc8ec503539fd00dfc735b0fb4387ab784555dbbfdc044c3d7e9f6"
+  }
+]

@@ -1,0 +1,8 @@
+# Três formas de repetição na mesma linguagem.
+seq {
+    number soma = 0;
+    for (var i in range(3)) { soma = soma + i; }
+    while (soma < 6) { soma = soma + 1; }
+    do { soma = soma + 1; } while (soma < 7);
+    print(soma);
+}

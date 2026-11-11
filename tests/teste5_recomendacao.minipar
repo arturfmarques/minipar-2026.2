@@ -1,0 +1,127 @@
+# Traducao do modelo oficial: pesos/bias 0.5, 10 ocultas, limiar > 0.5.
+# O catalogo e o historico sao objetos/listas, nao respostas de recomendacao.
+class Produto {
+    var nome = "";
+    func init(string nome) { this.nome = nome; }
+}
+class Categoria {
+    var nome = "";
+    var produtos = [new Produto("")];
+    func init(string nome, nomes) {
+        this.nome = nome;
+        this.produtos.clear();
+        for (var nome_produto in nomes) {
+            this.produtos.append(new Produto(nome_produto));
+        }
+    }
+}
+class Usuario {
+    var historico_compras = [""];
+    func init(historico) { this.historico_compras = historico; }
+    func codificar_historico(todos_produtos) {
+        var codificacao = [];
+        for (var nome in todos_produtos) {
+            var comprou = 0;
+            for (var compra in this.historico_compras) {
+                if (nome == compra) { comprou = 1; }
+            }
+            codificacao.append(comprou);
+        }
+        return codificacao;
+    }
+}
+class RedeNeural {
+    var W1 = matrix(1, 1, 0.5);
+    var b1 = [0.5];
+    var W2 = matrix(1, 1, 0.5);
+    var b2 = [0.5];
+    func init(number input_size, number hidden_size, number output_size) {
+        this.W1 = matrix(input_size, hidden_size, 0.5);
+        this.W2 = matrix(hidden_size, output_size, 0.5);
+        this.b1.clear();
+        this.b2.clear();
+        for (var i in range(hidden_size)) { this.b1.append(0.5); }
+        for (var i in range(output_size)) { this.b2.append(0.5); }
+    }
+    func relu(number x) -> number {
+        if (x > 0) { return x; }
+        return 0;
+    }
+    func sigmoid(number x) -> number { return 1 / (1 + exp(0 - x)); }
+    func forward(X) {
+        var A1 = [];
+        for (var i in range(len(this.b1))) {
+            var soma = 0;
+            for (var j in range(len(X))) {
+                soma = soma + X[j] * this.W1[j][i];
+            }
+            A1.append(this.relu(soma + this.b1[i]));
+        }
+        var A2 = [];
+        for (var i in range(len(this.b2))) {
+            var soma = 0;
+            for (var j in range(len(A1))) {
+                soma = soma + A1[j] * this.W2[j][i];
+            }
+            A2.append(this.sigmoid(soma + this.b2[i]));
+        }
+        return A2;
+    }
+}
+class Recomendador {
+    var usuario = new Usuario([""]);
+    var categorias = [new Categoria("", [""])];
+    var todos_produtos = [""];
+    func init(Usuario usuario, categorias) {
+        this.usuario = usuario;
+        this.categorias = categorias;
+        this.todos_produtos.clear();
+        for (var categoria in this.categorias) {
+            for (var produto in categoria.produtos) {
+                this.todos_produtos.append(produto.nome);
+            }
+        }
+    }
+    func recomendar() {
+        var entrada_codificada = this.usuario.codificar_historico(this.todos_produtos);
+        var rede = new RedeNeural(len(entrada_codificada), 10, len(entrada_codificada));
+        var saidas = rede.forward(entrada_codificada);
+        var recomendacoes = [""];
+        recomendacoes.clear();
+        print("Historico codificado:", entrada_codificada);
+        print("Probabilidades:", saidas);
+        for (var i in range(len(saidas))) {
+            if ((saidas[i] > 0.5) && (entrada_codificada[i] == 0)) {
+                recomendacoes.append(this.todos_produtos[i]);
+            }
+        }
+        return recomendacoes;
+    }
+}
+func catalogo() {
+    return [
+        new Categoria("Eletrônicos", ["Smartphone", "Laptop", "Tablet", "Fones de ouvido"]),
+        new Categoria("Roupas", ["Camisa", "Jeans", "Jaqueta", "Sapatos"]),
+        new Categoria("Eletrodomésticos", ["Geladeira", "Micro-ondas", "Máquina de lavar", "Ar condicionado"]),
+        new Categoria("Livros", ["Ficção", "Não-ficção", "Ficção científica", "Fantasia"])
+    ];
+}
+seq {
+    var categorias = catalogo();
+    var historico = [""];
+    historico.clear();
+    print("==== Teste 5: recomendacao e-commerce com rede neural ====");
+    print("Informe o historico de compras (1 = comprou, 0 = nao comprou):");
+    for (var categoria in categorias) {
+        for (var produto in categoria.produtos) {
+            print(produto.nome, "- comprou? (0/1):");
+            var comprou = to_number(input(""));
+            if (comprou == 1) { historico.append(produto.nome); }
+        }
+    }
+    var usuario = new Usuario(historico);
+    var recomendador = new Recomendador(usuario, categorias);
+    var recomendacoes = recomendador.recomendar();
+    print("Produtos recomendados para você:");
+    for (var nome in recomendacoes) { print(nome); }
+}

@@ -1,0 +1,9 @@
+# PAR executa instruções como tarefas; SEQ mantém a ordem externa.
+seq {
+    print("inicio");
+    par {
+        print("tarefa A");
+        print("tarefa B");
+    }
+    print("fim");
+}

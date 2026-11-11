@@ -1,0 +1,16 @@
+# Em B, inicie este mesmo programa com --worker --host 0.0.0.0 --port 7000.
+# Em A, configure MINIPAR_WORKER_HOST com o endereco real de B.
+func quadrado_remoto(number n) -> number {
+    print("TRABALHADOR executou quadrado de", n);
+    return n * n;
+}
+
+seq {
+    var host = get_env("MINIPAR_WORKER_HOST", "127.0.0.1");
+    var porta = to_number(get_env("MINIPAR_WORKER_PORT", "7000"));
+    var tarefa1 = fork remote(host, porta) quadrado_remoto(7);
+    var tarefa2 = fork remote(host, porta) quadrado_remoto(8);
+    number resultado1 = join(tarefa1);
+    number resultado2 = join(tarefa2);
+    print("CLIENTE recebeu", resultado1, resultado2);
+}

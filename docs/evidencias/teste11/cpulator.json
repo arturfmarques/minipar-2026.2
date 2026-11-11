@@ -1,0 +1,71 @@
+{
+  "date": "2026-11-11",
+  "status": "APROVADO",
+  "url": "https://cpulator.01xz.net/?sys=arm-de1soc",
+  "system": "ARMv7 DE1-SoC",
+  "method": "CUA nativo, Chrome; arquivos locais abertos com File/Open, F5, F3, F4; valores observados na acessibilidade e imagens reais",
+  "debug_checks_disabled": false,
+  "cases": [
+    {
+      "file": "expressao-1.arm",
+      "sha256": "4de93d62279596e6291b9dac97122b6c8cd31c3b6188acb7851aecefddb6f88d",
+      "compile_message": "Compile succeeded.",
+      "gnu_assembler": "arm-eabi-as -mfloat-abi=softfp -march=armv7-a -mcpu=cortex-a9 -mfpu=neon-fp16 --gdwarf2",
+      "server_source_identifier": "asmO2dGqS",
+      "loaded_bytes": 65632,
+      "r0_hex": "00000016",
+      "r0_signed": 22,
+      "r12_hex": "00000000",
+      "sp_hex": "00010060",
+      "pc_hex": "00000054",
+      "stop_symbol": "__expr_done",
+      "final_state": "Stopped",
+      "observed_warnings_in_fresh_run": []
+    },
+    {
+      "file": "expressao-2.arm",
+      "sha256": "afbd67e630e5f2b0f476078cae7ff9c72de8e43fa884b0bcaa9694af33143118",
+      "compile_message": "Compile succeeded.",
+      "gnu_assembler": "arm-eabi-as -mfloat-abi=softfp -march=armv7-a -mcpu=cortex-a9 -mfpu=neon-fp16 --gdwarf2",
+      "server_source_identifier": "asmnbYozu",
+      "loaded_bytes": 65632,
+      "r0_hex": "FFFFFFAC",
+      "r0_signed": -84,
+      "r12_hex": "00000000",
+      "sp_hex": "00010060",
+      "pc_hex": "00000054",
+      "stop_symbol": "__expr_done",
+      "final_state": "Stopped",
+      "observed_warnings_in_fresh_run": []
+    },
+    {
+      "file": "expressao-3.arm",
+      "sha256": "4de93d62279596e6291b9dac97122b6c8cd31c3b6188acb7851aecefddb6f88d",
+      "compile_message": "Compile succeeded.",
+      "gnu_assembler": "arm-eabi-as -mfloat-abi=softfp -march=armv7-a -mcpu=cortex-a9 -mfpu=neon-fp16 --gdwarf2",
+      "server_source_identifier": "asmkmC29W",
+      "loaded_bytes": 65632,
+      "r0_hex": "00000016",
+      "r0_signed": 22,
+      "r12_hex": "00000000",
+      "sp_hex": "00010060",
+      "pc_hex": "00000054",
+      "stop_symbol": "__expr_done",
+      "final_state": "Stopped",
+      "observed_warnings_in_fresh_run": []
+    }
+  ],
+  "initial_reload_warning": {
+    "case": 2,
+    "stage": "Carregamento do segundo ELF antes de executar",
+    "message": "Memory access to address 0000ffe0 ... 0001005c looks like unallocated stack space. Current stack pointer is 00010060",
+    "result_before_repeat": "r0=ffffffac",
+    "action": "Recarregar a pagina do navegador, confirmar pc/sp=0 e repetir montagem/execucao",
+    "repeat": "Sem esses avisos; r0=ffffffac. Nao houve alteracao do gerador nem desativacao de checks."
+  },
+  "images": {
+    "real_cua_images_displayed": true,
+    "exported_to_repository": false,
+    "academic_screenshots": "Usuario fara capturas definitivas conforme docs/teste11-cpulator-2026.2.md"
+  }
+}

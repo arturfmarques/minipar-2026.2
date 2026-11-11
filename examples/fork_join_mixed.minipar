@@ -1,0 +1,12 @@
+# Compilar uma vez. Iniciar o mesmo executável com --worker --port 7000.
+func square(number n) -> number {
+    return n * n;
+}
+seq {
+    var a = fork local square(7);
+    var b = fork remote("127.0.0.1", 7000) square(8);
+    number x = join(a);
+    number y = join(b);
+    print("x =", x);
+    print("y =", y);
+}

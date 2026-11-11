@@ -1,0 +1,6 @@
+# Declarações tipadas e inferência.
+seq {
+    number base = 7;
+    var dobro = base * 2;
+    print(dobro);
+}

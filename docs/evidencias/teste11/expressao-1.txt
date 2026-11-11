@@ -1,0 +1,87 @@
+Expressao infixada: TOKENS_BEGIN
+TOKEN LPAREN ( 1 1
+TOKEN LPAREN ( 1 2
+TOKEN NUMBER 2 1 3
+TOKEN ADD + 1 4
+TOKEN NUMBER 4 1 5
+TOKEN RPAREN ) 1 6
+TOKEN MUL * 1 7
+TOKEN NUMBER 7 1 8
+TOKEN RPAREN ) 1 9
+TOKEN SUB - 1 10
+TOKEN LPAREN ( 1 11
+TOKEN NUMBER 5 1 12
+TOKEN MUL * 1 13
+TOKEN NUMBER 4 1 14
+TOKEN RPAREN ) 1 15
+TOKENS_END
+AST_BEGIN
+ROOT BINARY -
+  L BINARY *
+    L BINARY +
+      L NUMBER 2
+      R NUMBER 4
+    R NUMBER 7
+  R BINARY *
+    L NUMBER 5
+    R NUMBER 4
+
+AST_END
+SIMBOLOS_BEGIN
+SIMBOLO 2 CONST 2
+SIMBOLO 4 CONST 4
+SIMBOLO 7 CONST 7
+SIMBOLO 5 CONST 5
+SIMBOLOS_END
+TAC_BEGIN
+t1 = 2 + 4
+t2 = t1 * 7
+t3 = 5 * 4
+t4 = t2 - t3
+
+TAC_END
+RESULTADO 22
+ARM_BEGIN
+.syntax unified
+.arch armv7-a
+.arm
+.global _start
+.global __expr_done
+.text
+.balign 4
+_start:
+    ldr sp, =__expr_stack_top
+    mov r12, #0
+    ldr r0, =2
+    push {r0, r1}
+    ldr r0, =4
+    pop {r1, r2}
+    add r0, r1, r0
+    push {r0, r1}
+    ldr r0, =7
+    pop {r1, r2}
+    mul r2, r1, r0
+    mov r0, r2
+    push {r0, r1}
+    ldr r0, =5
+    push {r0, r1}
+    ldr r0, =4
+    pop {r1, r2}
+    mul r2, r1, r0
+    mov r0, r2
+    pop {r1, r2}
+    sub r0, r1, r0
+__expr_done:
+    b __expr_done
+.ltorg
+.data
+.balign 4
+.bss
+.balign 8
+__expr_stack:
+.space 65536
+__expr_stack_top:
+
+ARM_END
+ARQUIVO: C:\GitHub\Minipar-2026.2\docs\evidencias\teste11\expressao-1.arm
+STATUS APROVADO

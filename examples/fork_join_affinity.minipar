@@ -1,0 +1,14 @@
+func quadrado_na_cpu(number n, number cpu) -> list {
+    require(current_cpu() == cpu, "CPU observada diferente da solicitada");
+    return [n * n, current_cpu()];
+}
+
+seq {
+    var cpus = available_cpus();
+    print("PROCESSADORES_LOGICOS_PERMITIDOS", cpus);
+    require(len(cpus) >= 2, "Esta demonstracao exige dois processadores logicos permitidos");
+    var tarefa1 = fork local quadrado_na_cpu(7, cpus[0]) on core(cpus[0]);
+    var tarefa2 = fork local quadrado_na_cpu(8, cpus[1]) on core(cpus[1]);
+    print("RESULTADO_CPU_1", join(tarefa1));
+    print("RESULTADO_CPU_2", join(tarefa2));
+}

@@ -1,0 +1,38 @@
+func quicksort_iterativo(arr) {
+    # Pares (inicio, fim), como a pilha dinamica da referencia oficial.
+    var stack = [0, len(arr) - 1];
+    while (len(stack) > 0) {
+        var fim = stack.pop();
+        var inicio = stack.pop();
+        if (inicio >= fim) {
+            continue;
+        }
+        var pivot = arr[fim];
+        var i = inicio - 1;
+        var j = inicio;
+        while (j < fim) {
+            if (arr[j] <= pivot) {
+                i = i + 1;
+                var tmp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = tmp;
+            }
+            j = j + 1;
+        }
+        i = i + 1;
+        var tmp2 = arr[i];
+        arr[i] = arr[fim];
+        arr[fim] = tmp2;
+        stack.append(inicio);
+        stack.append(i - 1);
+        stack.append(i + 1);
+        stack.append(fim);
+    }
+    return arr;
+}
+
+seq {
+    var array = [33, 12, 98, 5, 61];
+    var ordenado = quicksort_iterativo(array);
+    print("Array ordenado:", ordenado);
+}

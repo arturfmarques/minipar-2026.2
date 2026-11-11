@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Laboratório Educacional · MiniPar 2026.2</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+  <link rel="stylesheet" href="/static/css/web-common.css">
+  <link rel="stylesheet" href="/static/css/educacional.css">
+</head>
+<body data-web-mode="educational">
+  <div class="app-shell">
+    {% set web_mode = 'educational' %}
+    {% include '_web_header.html' %}
+    <div class="workspace">
+      <section class="editor-card" aria-labelledby="source-title">
+        <div class="card-heading"><h3 id="source-title">Código MiniPar</h3><span id="source-lines" class="quiet">1 linha</span></div>
+        <div class="source-controls">
+          <label for="example-select">Carregar exemplo</label>
+          <select id="example-select"><option value="">Selecione um programa…</option></select>
+          <button id="clear-source" class="text-button" type="button">Limpar editor</button>
+        </div>
+        <div id="editor-frame"><div id="fallback-gutter" aria-hidden="true">1</div><textarea id="source-editor" spellcheck="false" aria-label="Código fonte MiniPar">seq {
+    var x = 10 + 20;
+    print(x);
+}</textarea></div>
+        <div class="stdin-card"><label for="stdin-editor">Entrada (stdin)</label><span class="quiet">Uma resposta por linha · Teste 11: expressão</span><textarea id="stdin-editor" rows="2" spellcheck="false" placeholder="Entrada opcional para Executar"></textarea></div>
+        <p class="editor-hint">Ctrl+Enter: compilar · Diagnósticos levam à linha do erro.</p>
+      </section>
+
+      <section class="results-card" aria-labelledby="results-title">
+        <div class="card-heading"><h3 id="results-title">Resultados</h3><span id="state-badge" class="state-badge idle" role="status">Pronto</span></div>
+        <nav class="stage-nav" aria-label="Etapas do compilador">
+          <button type="button" data-stage="tokens">Tokens</button><button type="button" data-stage="ast">AST</button><button type="button" data-stage="semantic">Semântica</button><button type="button" data-stage="tac">TAC</button><button type="button" data-stage="cpp">C++</button>
+          <button type="button" id="compile-button" class="action">Compilar</button><button type="button" id="run-button" class="action secondary" disabled>Executar</button><button type="button" id="downloads-button">Baixar</button>
+        </nav>
+        <div id="phase-strip" class="phase-strip" aria-label="Estado das fases"></div>
+        <div id="messages" class="messages" role="alert" aria-live="polite"></div>
+        <div id="panel-body" class="panel-body"><div class="empty-state">Selecione uma etapa para analisar o código.</div></div>
+        <div id="downloads" class="downloads" hidden></div>
+        <details id="execution-console" class="console"><summary class="console-title"><span>Terminal</span><span id="console-status">Aguardando compilação</span></summary><pre id="console-output">A saída do programa aparecerá aqui.</pre></details>
+      </section>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
+  <script src="/static/js/web-common.js"></script>
+  <script src="/static/js/educacional-view.js"></script>
+  <script src="/static/js/educacional.js"></script>
+</body>
+</html>

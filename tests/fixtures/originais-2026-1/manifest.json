@@ -1,0 +1,37 @@
+[
+  {
+    "file": "tests\\teste1_calculadora_cliente_servidor.minipar",
+    "sha256_before": "1a2b11df5e3ed31b3582cca242a640830984ad80c38dfefd02647b29243e6e6e",
+    "backup": "docs\\evidencias\\originais-testes1a7\\teste1_calculadora_cliente_servidor.minipar"
+  },
+  {
+    "file": "tests\\teste2_fatorial_fibonacci_par.minipar",
+    "sha256_before": "6eebdf5515c2330548fd40d95dc031b7f6023e6826ccbf3225be2794c5c333fd",
+    "backup": "docs\\evidencias\\originais-testes1a7\\teste2_fatorial_fibonacci_par.minipar"
+  },
+  {
+    "file": "tests\\teste3_neuronio.minipar",
+    "sha256_before": "6a7fab171815e039cb4eb481f9cad1b821e7c9d35b282eab802275f4c771491f",
+    "backup": "docs\\evidencias\\originais-testes1a7\\teste3_neuronio.minipar"
+  },
+  {
+    "file": "tests\\teste4_rede_neural_xor.minipar",
+    "sha256_before": "fccaeba8391e2dae0979862f35a11ecb9eb617f938b754549a230c66e39ab050",
+    "backup": "docs\\evidencias\\originais-testes1a7\\teste4_rede_neural_xor.minipar"
+  },
+  {
+    "file": "tests\\teste5_recomendacao.minipar",
+    "sha256_before": "8d4924789ebd80da1796fa96140d4d8dee09f60ead824771f95ee2915d85cfb6",
+    "backup": "docs\\evidencias\\originais-testes1a7\\teste5_recomendacao.minipar"
+  },
+  {
+    "file": "tests\\teste6_quicksort_classes.minipar",
+    "sha256_before": "26564f422dd68c9bec7ce635220c12eb1ad89785f35a62510e14ea4215bf5e7e",
+    "backup": "docs\\evidencias\\originais-testes1a7\\teste6_quicksort_classes.minipar"
+  },
+  {
+    "file": "tests\\teste7_quicksort_iterativo_tac.minipar",
+    "sha256_before": "481fea6e0f4ab976473eb9e1a100ad3f92005268c0f9bb7975428ebfc64d377b",
+    "backup": "docs\\evidencias\\originais-testes1a7\\teste7_quicksort_iterativo_tac.minipar"
+  }
+]

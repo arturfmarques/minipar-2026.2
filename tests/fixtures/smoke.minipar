@@ -1,0 +1,4 @@
+# Percurso mínimo real até um executável nativo.
+seq {
+    print(42);
+}

@@ -1,0 +1,222 @@
+# Teste 9: 5 tarefas independentes; nenhum nucleo de CPU e fixado.
+# Funcoes comuns convertidas das referencias do professor; sem estado global.
+func proximo_lcg(number estado) -> number {
+    # Produto modular exato em double: partes de 16 bits evitam perder inteiros.
+    require(estado >= 0 && estado <= 2147483647 && estado == floor(estado), "Estado LCG invalido");
+    var baixo = estado % 65536;
+    var alto = floor(estado / 65536);
+    var produto = 1103515245 * baixo + 12345;
+    var novo_baixo = produto % 65536;
+    var novo_alto = (1103515245 * alto + floor(produto / 65536)) % 32768;
+    return novo_alto * 65536 + novo_baixo;
+}
+
+func criar_atividades(number alunos, number por_aluno) -> matrix {
+    require(alunos > 0 && alunos <= 1000 && alunos == floor(alunos), "Quantidade de alunos invalida");
+    require(por_aluno > 0 && por_aluno <= 100 && por_aluno == floor(por_aluno), "Quantidade de atividades invalida");
+    var atividades = matrix(0, 4, 0);
+    var estado = 123456789;
+    var id = 0;
+    for (var aluno in range(alunos)) {
+        for (var atividade in range(por_aluno)) {
+            estado = proximo_lcg(estado);
+            atividades.append([id, aluno + 1, atividade + 1, estado]);
+            id = id + 1;
+        }
+    }
+    return atividades;
+}
+
+func fatiar(matrix atividades, number inicio, number fim) -> matrix {
+    require(inicio >= 0 && inicio <= fim && fim <= len(atividades), "Fatia invalida");
+    require(inicio == floor(inicio) && fim == floor(fim), "Indices de fatia invalidos");
+    var lote = matrix(0, 4, 0);
+    for (var i in range(inicio, fim)) { lote.append(atividades[i]); }
+    return lote;
+}
+
+func avaliar_lote(matrix atividades, number avaliador, number fator) -> matrix {
+    require(avaliador >= 0 && avaliador < 4 && avaliador == floor(avaliador), "Avaliador invalido");
+    require(fator >= 0.001 && fator <= 10, "Fator de trabalho invalido");
+    var resultados = matrix(0, 6, 0);
+    for (var tarefa in atividades) {
+        require(len(tarefa) == 4, "Atividade malformada");
+        require(tarefa[0] >= 0 && tarefa[0] == floor(tarefa[0]), "ID de atividade invalido");
+        require(tarefa[1] >= 1 && tarefa[2] >= 1, "Aluno/atividade invalidos");
+        require(tarefa[3] >= 0 && tarefa[3] <= 2147483647 && tarefa[3] == floor(tarefa[3]), "Semente invalida");
+        var segundos = 0.05 + 0.10 * (tarefa[3] / 2147483647);
+        var iteracoes = floor(segundos * 1500000 * fator);
+        var soma = 0;
+        var i = 0;
+        # Carga CPU da referencia. O checksum retornado impede descartar o trabalho.
+        while (i < iteracoes) { soma = soma + i; i = i + 1; }
+        resultados.append([tarefa[0], tarefa[1], tarefa[2], avaliador, iteracoes, soma]);
+    }
+    return resultados;
+}
+
+func esperar_inicio(number id, c_channel pronto, c_channel iniciar) -> void {
+    send(pronto, to_string(id));
+    var comando = receive(iniciar);
+    require(comando == "iniciar", "Comando de sincronizacao invalido");
+}
+
+func trabalhador_avaliacao(matrix atividades, number avaliador, number fator, c_channel pronto, c_channel iniciar) -> matrix {
+    esperar_inicio(avaliador, pronto, iniciar);
+    return avaliar_lote(atividades, avaliador, fator);
+}
+
+func liberar_tarefas(c_channel pronto, canais) -> void {
+    var vistos = [];
+    for (var i in range(len(canais))) { vistos.append(0); }
+    for (var i in range(len(canais))) {
+        var id = to_number(receive(pronto));
+        require(id >= 0 && id < len(canais) && id == floor(id), "Tarefa de barreira invalida");
+        require(vistos[id] == 0, "Tarefa duplicada na barreira");
+        vistos[id] = 1;
+    }
+    # Todos chegaram antes de qualquer liberacao: intervalos de vida sobrepostos.
+    for (var canal in canais) { send(canal, "iniciar"); }
+}
+
+func combinar(matrix a, matrix b, matrix c, matrix d) -> matrix {
+    var resultado = matrix(0, 6, 0);
+    for (var linha in a) { resultado.append(linha); }
+    for (var linha in b) { resultado.append(linha); }
+    for (var linha in c) { resultado.append(linha); }
+    for (var linha in d) { resultado.append(linha); }
+    return resultado;
+}
+
+func validar_resultados(matrix resultados, number total, bool paralelo) -> void {
+    require(len(resultados) == total, "Atividade perdida/quantidade incorreta");
+    var vistos = [];
+    for (var i in range(total)) { vistos.append(0); }
+    for (var linha in resultados) {
+        require(len(linha) == 6, "Resultado malformado");
+        var id = linha[0];
+        require(id >= 0 && id < total && id == floor(id), "ID de resultado invalido");
+        require(vistos[id] == 0, "Atividade duplicada");
+        vistos[id] = 1;
+        require(linha[5] == linha[4] * (linha[4] - 1) / 2, "Checksum de avaliacao incorreto");
+        if (paralelo) {
+            require(linha[3] == floor(id / (total / 4)), "Grupo de avaliador incorreto");
+        } else { require(linha[3] == 0, "Avaliador sequencial incorreto"); }
+    }
+    for (var quantidade in vistos) { require(quantidade == 1, "Atividade ausente"); }
+}
+
+func apresentar(matrix resultados, string modo) -> void {
+    for (var linha in resultados) {
+        print("ATIVIDADE", modo, to_string(linha[0]), to_string(linha[1]), to_string(linha[2]),
+              to_string(linha[3]), to_string(linha[4]), to_string(linha[5]));
+    }
+}
+
+func contar_avaliador(matrix resultados, number id) -> number {
+    var total = 0;
+    for (var linha in resultados) { if (linha[3] == id) { total = total + 1; } }
+    return total;
+}
+
+func mandelbrot_iteracoes(number largura, number altura, number max_iter) -> matrix {
+    require(largura > 0 && largura <= 1000 && largura == floor(largura), "Largura invalida");
+    require(altura > 0 && altura <= 1000 && altura == floor(altura), "Altura invalida");
+    require(max_iter > 0 && max_iter <= 10000 && max_iter == floor(max_iter), "Iteracoes invalidas");
+    var pixels = matrix(altura, largura, 0);
+    for (var y in range(altura)) {
+        var cy = (y / altura) * 2.4 - 1.2;
+        for (var x in range(largura)) {
+            var cx = (x / largura) * 3 - 2;
+            var zx = 0;
+            var zy = 0;
+            var iteracao = 0;
+            while (zx * zx + zy * zy <= 4 && iteracao < max_iter) {
+                var tmp = zx * zx - zy * zy + cx;
+                zy = 2 * zx * zy + cy;
+                zx = tmp;
+                iteracao = iteracao + 1;
+            }
+            pixels[y][x] = iteracao;
+        }
+    }
+    return pixels;
+}
+
+func mandelbrot(number largura, number altura, number max_iter) -> string {
+    var pixels = mandelbrot_iteracoes(largura, altura, max_iter);
+    var caracteres = " .:-=+#%@";
+    var texto = "";
+    for (var y in range(altura)) {
+        if (y > 0) { texto = texto + "\n"; }
+        var linha = "";
+        for (var x in range(largura)) {
+            var indice = floor((pixels[y][x] / max_iter) * (len(caracteres) - 1));
+            linha = linha + to_string(caracteres[indice]);
+        }
+        texto = texto + linha;
+    }
+    return texto;
+}
+
+func trabalhador_mandelbrot(number largura, number altura, number max_iter, c_channel pronto, c_channel iniciar) -> string {
+    esperar_inicio(4, pronto, iniciar);
+    return mandelbrot(largura, altura, max_iter);
+}
+
+seq {
+    var atividades = criar_atividades(40, 4);
+    var lote0 = fatiar(atividades, 0, 40);
+    var lote1 = fatiar(atividades, 40, 80);
+    var lote2 = fatiar(atividades, 80, 120);
+    var lote3 = fatiar(atividades, 120, 160);
+    var fator = to_number(get_env("MINIPAR_WORK_FACTOR", "1"));
+    var inicio_seq = monotonic();
+    var resultados_seq = avaliar_lote(atividades, 0, fator);
+    var fractal_seq = mandelbrot(50, 20, 100);
+    var tempo_seq = monotonic() - inicio_seq;
+    var base = to_number(get_env("MINIPAR_SYNC_BASE_PORT", "5900"));
+    var host_cliente = get_env("MINIPAR_PARENT_HOST", "127.0.0.1");
+    var host_worker = get_env("MINIPAR_REMOTE_HOST", "127.0.0.1");
+    var pronto = c_channel(host_cliente, base);
+    var gate0 = c_channel(host_cliente, base + 1);
+    var gate1 = c_channel(host_cliente, base + 2);
+    var gate2 = c_channel(host_cliente, base + 3);
+    var gate3 = c_channel(host_cliente, base + 4);
+    var gate4 = c_channel(host_cliente, base + 5);
+    var canais = [gate0, gate1, gate2, gate3, gate4];
+    var inicio_par = monotonic();
+    var professor = fork local trabalhador_avaliacao(lote0, 0, fator, pronto, gate0);
+    var monitor1 = fork local trabalhador_avaliacao(lote1, 1, fator, pronto, gate1);
+    var monitor2 = fork local trabalhador_avaliacao(lote2, 2, fator, pronto, gate2);
+    var monitor3 = fork local trabalhador_avaliacao(lote3, 3, fator, pronto, gate3);
+    var tarefa_mandelbrot = fork local trabalhador_mandelbrot(50, 20, 100, pronto, gate4);
+    liberar_tarefas(pronto, canais);
+    var professor_resultado = join(professor);
+    var monitor1_resultado = join(monitor1);
+    var monitor2_resultado = join(monitor2);
+    var monitor3_resultado = join(monitor3);
+    var fractal_par = join(tarefa_mandelbrot);
+    var resultados_par = combinar(professor_resultado, monitor1_resultado, monitor2_resultado, monitor3_resultado);
+    var tempo_par = monotonic() - inicio_par;
+    validar_resultados(resultados_seq, 160, false);
+    validar_resultados(resultados_par, 160, true);
+    require(fractal_seq == fractal_par, "Fractal sequencial/paralelo diferente");
+    apresentar(resultados_seq, "SEQ");
+    apresentar(resultados_par, "PAR");
+    var avaliadores = ["Professor", "Monitor 1", "Monitor 2", "Monitor 3"];
+    for (var id in range(4)) { print("AVALIADOR", id, avaliadores[id], contar_avaliador(resultados_par, id)); }
+    print("MANDELBROT_BEGIN");
+    print(fractal_par);
+    print("MANDELBROT_END");
+    require(tempo_seq > 0 && tempo_par > 0, "Medicao de tempo invalida");
+    print("TAREFAS", len(canais));
+    print("ATIVIDADES_SEQ", len(resultados_seq));
+    print("ATIVIDADES_PAR", len(resultados_par));
+    print("TEMPO_SEQ", to_string(tempo_seq));
+    print("TEMPO_PAR", to_string(tempo_par));
+    print("SPEEDUP", to_string(tempo_seq / tempo_par));
+    print("REDUCAO_PERCENTUAL", to_string(((tempo_seq - tempo_par) / tempo_seq) * 100));
+    print("STATUS APROVADO");
+}
+

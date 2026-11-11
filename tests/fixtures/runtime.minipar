@@ -1,0 +1,91 @@
+class Box {
+    var value = 1;
+    var data = [1, 2];
+}
+func square(number n) -> number { return n * n; }
+func positive(number n) -> bool { return n > 0; }
+func scale(list values, number factor) -> list {
+    var result = values;
+    for (var i = 0; i < len(result); i = i + 1) { result[i] = result[i] * factor; }
+    return result;
+}
+func echo(string text) -> string { return text; }
+func fail(string text) -> number { return to_number(text); }
+func void_task() -> void { print("worker void"); }
+func grid() -> matrix { return matrix(2, 2, 3); }
+func mutate(Box box) -> number { box.value = 99; box.data[0] = 99; return box.value; }
+func nested(number n) -> number { var t = fork local square(n); return join(t) + 1; }
+func rendezvous(c_channel ready, c_channel gate, number n) -> number {
+    send(ready, n);
+    var signal = receive(gate);
+    return n * n;
+}
+
+var mode = input();
+if (mode == "local") {
+    var n = to_number(input()); var t = fork local square(n); print(join(t));
+} else if (mode == "four") {
+    var a = fork local square(2); var b = fork local square(3);
+    var c = fork local square(4); var d = fork local square(5);
+    print(join(a), join(b), join(c), join(d));
+} else if (mode == "aliases") {
+    var t = fork local scale([1, 2, 3], 2); var alias = t;
+    var first = join(t); first[0] = 999; print(join(alias));
+} else if (mode == "error") {
+    var t = fork local fail("invalid-number"); print(join(t));
+} else if (mode == "unjoined_error") {
+    var t = fork local fail("invalid-number"); print("main continued");
+} else if (mode == "invalid") {
+    var t; if (false) { t = fork local square(2); } print(join(t));
+} else if (mode == "object") {
+    var b = new Box(); var t = fork local mutate(b);
+    print(join(t), b.value, b.data[0]);
+} else if (mode == "nested") {
+    var t = fork local nested(3); print(join(t));
+} else if (mode == "par") {
+    var b = new Box();
+    par { seq { var local_copy = b; local_copy.value = 88; print(local_copy.value); } print(b.value); }
+    print("parent", b.value);
+} else if (mode == "remote") {
+    var port = to_number(input()); var n = to_number(input());
+    var t = fork remote("127.0.0.1", port) square(n); print(join(t));
+} else if (mode == "mixed") {
+    var port = to_number(input());
+    var a = fork local square(7); var b = fork remote("127.0.0.1", port) square(8);
+    print("x =", join(a)); print("y =", join(b));
+} else if (mode == "remote_list") {
+    var port = to_number(input()); var t = fork remote("127.0.0.1", port) scale([2, 4, 6], 3);
+    print(join(t));
+} else if (mode == "remote_string") {
+    var port = to_number(input()); var value = input();
+    var t = fork remote("127.0.0.1", port) echo(value); print(join(t));
+} else if (mode == "remote_error") {
+    var port = to_number(input()); var t = fork remote("127.0.0.1", port) fail("bad"); print(join(t));
+} else if (mode == "remote_bool") {
+    var port = to_number(input()); var t = fork remote("127.0.0.1", port) positive(2); bool value = join(t); print(value);
+} else if (mode == "remote_void") {
+    var port = to_number(input()); var t = fork remote("127.0.0.1", port) void_task(); join(t); print("VOID");
+} else if (mode == "remote_matrix") {
+    var port = to_number(input()); var t = fork remote("127.0.0.1", port) grid(); print(join(t));
+} else if (mode == "channel") {
+    var port = to_number(input()); var c = c_channel("127.0.0.1", port);
+    print("LISTENING"); print(receive(c)); print(receive(c)); print(receive(c));
+} else if (mode == "parallel" || mode == "different_times" || mode == "remote_gate" || mode == "unjoined") {
+    var count = to_number(input()); var remote_port = to_number(input());
+    var r1 = c_channel("127.0.0.1", to_number(input())); var g1 = c_channel("127.0.0.1", to_number(input()));
+    var r2 = c_channel("127.0.0.1", to_number(input())); var g2 = c_channel("127.0.0.1", to_number(input()));
+    if (mode == "unjoined") {
+        var t = fork local rendezvous(r1, g1, 3); print("MAIN_DONE");
+    } else if (mode == "remote_gate") {
+        var t = fork remote("127.0.0.1", remote_port) rendezvous(r1, g1, 3); print("FORKED"); print(join(t));
+    } else if (count == 2) {
+        var slow = fork local rendezvous(r1, g1, 3); var fast = fork local rendezvous(r2, g2, 4);
+        print("FORKED"); print("FAST", join(fast)); print("SLOW", join(slow));
+    } else {
+        var r3 = c_channel("127.0.0.1", to_number(input())); var g3 = c_channel("127.0.0.1", to_number(input()));
+        var r4 = c_channel("127.0.0.1", to_number(input())); var g4 = c_channel("127.0.0.1", to_number(input()));
+        var a = fork local rendezvous(r1, g1, 2); var b = fork local rendezvous(r2, g2, 3);
+        var c = fork local rendezvous(r3, g3, 4); var d = fork local rendezvous(r4, g4, 5);
+        print("FORKED"); print(join(a), join(b), join(c), join(d));
+    }
+}

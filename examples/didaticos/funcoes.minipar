@@ -1,0 +1,6 @@
+# Recursão e retorno de função.
+func fatorial(number n) -> number {
+    if (n <= 1) { return 1; }
+    else { return n * fatorial(n - 1); }
+}
+seq { print(fatorial(5)); }

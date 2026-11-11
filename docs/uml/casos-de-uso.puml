@@ -1,0 +1,45 @@
+@startuml casos-de-uso
+!pragma layout smetana
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+title MiniPar 2026.2 - Casos de uso existentes
+actor "Usuário MiniPar\n(estudante/docente)" as Usuario
+actor "Operador do\ntrabalhador TCP" as Operador
+actor "G++\nferramenta externa" as GPP
+rectangle "Sistema MiniPar 2026.2" {
+  usecase "Carregar e editar\nprograma MiniPar" as Editar
+  usecase "Compilar programa" as Compilar
+  usecase "Validar fonte\nLexer / Parser / Semântica" as Validar
+  usecase "Gerar TAC e C++" as Gerar
+  usecase "Compilar C++ nativamente" as Nativo
+  usecase "Executar programa\ne fornecer entrada" as Executar
+  usecase "Consultar saída\ne baixar artefatos" as Artefatos
+  usecase "Analisar etapas\nno ambiente educacional" as Analisar
+  usecase "Explorar AST gráfica\ne tabela de símbolos" as Explorar
+  usecase "Alternar IDE / Educacional" as Alternar
+  usecase "Iniciar trabalhador\npara Fork remoto" as Worker
+}
+Usuario -- Editar
+Usuario -- Compilar
+Usuario -- Executar
+Usuario -- Artefatos
+Usuario -- Analisar
+Usuario -- Alternar
+Operador -- Worker
+GPP -- Nativo
+Compilar ..> Validar : <<include>>
+Compilar ..> Gerar : <<include>>
+Compilar ..> Nativo : <<include>>
+Explorar ..> Analisar : <<extend>>
+Usuario -- Explorar
+note bottom of Executar
+  SEQ, PAR, Fork e Join pertencem ao programa executado.
+  O Teste 11 é uma aplicação MiniPar que gera ARM.
+end note
+note bottom of Analisar
+  Etapas podem ser solicitadas separadamente.
+  Uma falha impede as etapas posteriores.
+end note
+@enduml

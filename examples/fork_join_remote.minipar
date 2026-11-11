@@ -1,0 +1,11 @@
+# Inicie este mesmo binário com --worker --port 7000 em outro terminal.
+# --tac-only continua sem contatar o trabalhador.
+func add(number left, number right) -> number {
+    return left + right;
+}
+
+seq {
+    task remote_id = fork remote("127.0.0.1", 7000) add(2, 3);
+    number result = join(remote_id);
+    print(result);
+}

@@ -1,0 +1,55 @@
+.vscode
+
+# Saídas recriadas pelo compilador e pelas interfaces
+/output/
+/temp_code/
+/build/
+/dist/
+meu_teste.cpp
+meu_teste.exe
+
+# ./src
+codegen.o
+lexer.o
+main.o
+parser.o
+semantic.o
+
+# misc
+minipar_compiler.exe
+
+__pycache__
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Ambientes Python locais
+.audit-venv/
+.venv/
+venv/
+env/
+.tox/
+.nox/
+.env
+.env.*
+!.env.example
+
+# Binários e objetos gerados; fontes C++ e evidências TAC/ARM continuam visíveis
+*.exe
+*.o
+*.obj
+
+# Materiais usados apenas durante o desenvolvimento
+/referencias/
+/minipar-improvement/
+
+# Fontes Web locais cuja procedência não foi confirmada; preservar fora da publicação
+/docs/evidencias/fontes-locais/
+
+# Relatórios transitórios devem ficar em output/, mesmo quando pedidos por engano em docs
+/docs/evidencias/pytest*.xml
+/docs/evidencias/git-add-*.txt
+/.cache/

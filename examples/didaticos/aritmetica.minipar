@@ -1,0 +1,4 @@
+# Operações e precedência: 2 + (3 * 4) = 14.
+seq {
+    print(2 + 3 * 4);
+}

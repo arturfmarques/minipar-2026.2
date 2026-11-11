@@ -1,0 +1,154 @@
+@startuml classes
+top to bottom direction
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 12
+hide empty members
+title MiniPar 2026.2 - Classes principais do compilador Python
+package "Léxico e sintático" {
+  class Lexer {
+    -_source: str
+    -_pos: int
+    -_line: int
+    -_col: int
+    +tokenize(): List[Token]
+    -_skip_whitespace_and_comments()
+  }
+  class Token <<dataclass>> {
+    +type: TokenType
+    +lexeme: str
+    +line: int
+    +col: int
+  }
+  class Parser {
+    -_tokens: List[Token]
+    -_pos: int
+    +parse(): Program
+    -_consume(token_type, err_msg): Token
+    -_parse_expression(): ASTNode
+    -_parse_fork(token): ForkExpr
+  }
+}
+package "AST (seleção das dataclasses existentes)" {
+  class ASTNode {
+    +line: int
+    +col: int
+  }
+  class Program {
+    +statements: List[ASTNode]
+  }
+  class BinaryExpr {
+    +op: str
+    +left: ASTNode
+    +right: ASTNode
+  }
+  class ForkExpr {
+    +function: str
+    +arguments: List[ASTNode]
+    +destination: TaskDestination
+  }
+  class TaskDestination {
+    +kind: str
+    +host: Optional[ASTNode]
+    +port: Optional[ASTNode]
+    +core: Optional[ASTNode]
+  }
+  class JoinExpr {
+    +task: IdentifierExpr
+  }
+  class IdentifierExpr {
+    +name: str
+  }
+  class ClassDecl {
+    +name: str
+    +superclass: Optional[str]
+    +methods: List[FuncDecl]
+  }
+  class FuncDecl {
+    +name: str
+    +params: List[str]
+    +return_type: Optional[str]
+    +body: ASTNode
+  }
+}
+package "Semântica e geração" {
+  class Symbol <<dataclass>> {
+    +name: str
+    +type: str
+    +params: List[str]
+    +return_type: str
+    +captures: set[str]
+    +calls: set[str]
+  }
+  class SemanticAnalyzer {
+    -_scopes: List[Dict[str, Symbol]]
+    -_classes: Dict[str, Symbol]
+    -_functions: Dict[str, Symbol]
+    +diagnostics: List[Diagnostic]
+    +scope_history: list
+    +analyze(program): bool
+    +validate_node(node)
+    -_define_symbol(name, type_, line, params)
+    -_lookup(name): Optional[Symbol]
+  }
+  class TACGenerator {
+    +generate_text(program): str
+    +generate(program, output_name): str
+    -_expr(node): str
+    -_stmt(node)
+  }
+  class CppCodeGenerator {
+    +semantic: SemanticAnalyzer
+    +program_id: str
+    +render(program): str
+    +generate(program, output_name): bool
+    -_translate_expression(node): str
+    -_translate_statement(node, indent): str
+  }
+}
+package "Diagnósticos" {
+  class Diagnostic <<dataclass>> {
+    +phase: str
+    +message: str
+    +line: int
+    +col: int
+  }
+  class CompilerError {
+    +diagnostic: Diagnostic
+  }
+  class ParseError
+  class LexerError
+}
+ASTNode <|-- Program
+ASTNode <|-- BinaryExpr
+ASTNode <|-- ForkExpr
+ASTNode <|-- TaskDestination
+ASTNode <|-- JoinExpr
+ASTNode <|-- IdentifierExpr
+ASTNode <|-- ClassDecl
+ASTNode <|-- FuncDecl
+Program "1" *-- "0..*" ASTNode : statements
+ForkExpr "1" *-- "1" TaskDestination
+JoinExpr --> IdentifierExpr : task
+ClassDecl *-- "0..*" FuncDecl : methods
+Lexer ..> Token : cria
+Parser --> "1..*" Token : _tokens
+Parser ..> Program : cria
+SemanticAnalyzer *-- "0..*" Symbol : escopos / declarações
+SemanticAnalyzer ..> Program : valida
+SemanticAnalyzer --> "0..*" Diagnostic : diagnostics
+TACGenerator ..> Program
+CppCodeGenerator ..> Program
+CppCodeGenerator --> SemanticAnalyzer : semantic
+CompilerError *-- Diagnostic
+CompilerError <|-- ParseError
+CompilerError <|-- LexerError
+Parser ..> ParseError : lança
+Lexer ..> LexerError : lança
+note bottom of ASTNode
+  Seleção de nós: a AST também contém literais, listas, matrizes,
+  declarações, chamadas, controle, SEQ/PAR e comunicação.
+  Não há uma classe Python SymbolTable separada.
+end note
+@enduml
