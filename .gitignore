@@ -1,55 +1,81 @@
-.vscode
 
-# Saídas recriadas pelo compilador e pelas interfaces
+# ============================================================
+# MiniPar 2026.2 - Git Ignore
+# ============================================================
+
+# Arquivos gerados pelo compilador e pelas interfaces
 /output/
 /temp_code/
 /build/
 /dist/
-meu_teste.cpp
-meu_teste.exe
 
-# ./src
-codegen.o
-lexer.o
-main.o
-parser.o
-semantic.o
+# Arquivos de compilacao temporarios
+*.exe
+*.o
+*.obj
+*.out
+*.dll
+*.pyd
+*.class
 
-# misc
-minipar_compiler.exe
+# Executaveis e arquivos antigos gerados na raiz
+/meu_teste.cpp
+/meu_teste.exe
+/minipar_compiler.exe
 
-__pycache__
+# Cache do Python
+__pycache__/
 *.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
+*$py.class
 
-# Ambientes Python locais
-.audit-venv/
+# Ambientes virtuais Python
 .venv/
 venv/
 env/
+.audit-venv/
 .tox/
 .nox/
+
+# Arquivos de configuracao e segredos locais
 .env
 .env.*
 !.env.example
 
-# Binários e objetos gerados; fontes C++ e evidências TAC/ARM continuam visíveis
-*.exe
-*.o
-*.obj
+# Caches e relatorios de ferramentas
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+.pytype/
+.hypothesis/
 
-# Materiais usados apenas durante o desenvolvimento
+# Dependencias e caches do Node.js
+node_modules/
+.npm/
+.nyc_output/
+
+# Configuracoes locais do editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Arquivos temporarios do sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Pastas de referencia utilizadas apenas no desenvolvimento
 /referencias/
 /minipar-improvement/
 
-# Fontes Web locais cuja procedência não foi confirmada; preservar fora da publicação
+# Materiais locais nao destinados a publicacao
 /docs/evidencias/fontes-locais/
 
-# Relatórios transitórios devem ficar em output/, mesmo quando pedidos por engano em docs
+# Relatorios e arquivos temporarios de auditoria
 /docs/evidencias/pytest*.xml
 /docs/evidencias/git-add-*.txt
-/.cache/
