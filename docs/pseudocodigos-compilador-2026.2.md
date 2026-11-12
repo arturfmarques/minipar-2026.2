@@ -1,10 +1,6 @@
 # Pseudocódigos do compilador MiniPar 2026.2
 
-> Material provisório preservado para revisão acadêmica posterior.
-
-Atende aos itens 3–6 da página 45 do enunciado. Os procedimentos abaixo
-descrevem o código existente, não uma arquitetura proposta. Entradas e saídas
-mantêm os contratos Python; `nome()` corresponde ao método indicado no texto.
+Os procedimentos apresentam as etapas implementadas no compilador. Entradas e saídas seguem os contratos dos módulos Python; `nome()` corresponde ao método indicado em cada seção.
 
 ## 1. Analisador léxico
 
@@ -174,9 +170,7 @@ VALIDATE_NODE_INTERNO(nó):
 
 Uma parte das verificações é necessariamente dinâmica: portas/CPUs recebidas
 em runtime, índices, limites de serialização, erros de socket e de tarefas.
-`unknown`/`var` são tipos tolerados pela inferência; a análise não é prova
-formal completa de tipos. `int` é compatível com number e vira double no
-backend; a [matriz](matriz-requisitos-2026.2.md) registra essa limitação.
+`unknown`/`var` participam da inferência quando o tipo não é explicitado. O backend distingue `number` (`double`) de `int` (`std::int64_t`) e aplica verificações próprias para operações inteiras. A análise semântica não pretende constituir uma prova formal de correção de tipos.
 
 ## 4. Tabela de símbolos e escopos
 
